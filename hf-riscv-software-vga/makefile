@@ -181,6 +181,16 @@ vga_sandpile: crt
 	$(GCC_$(ARCH)) -o vga_sandpile.o app/vga/vga_sandpile.c
 	@$(MAKE) --no-print-directory link
 
+vga_sprite: crt
+	$(GCC_$(ARCH)) -o vga_drv.o app/vga/vga_drv.c
+	$(GCC_$(ARCH)) -o vga_sprite.o app/vga/vga_sprite.c
+	@$(MAKE) --no-print-directory link
+
+space_invaders: crt
+	$(GCC_$(ARCH)) -o vga_drv.o app/vga/vga_drv.c
+	$(GCC_$(ARCH)) -o space_invaders.o app/vga/space_invaders.c
+	@$(MAKE) --no-print-directory link
+
 kbd_axis: 	crt
 	$(GCC_$(ARCH)) -o kbd_axis.o app/kbd_axis.c
 	@$(MAKE) --no-print-directory link
