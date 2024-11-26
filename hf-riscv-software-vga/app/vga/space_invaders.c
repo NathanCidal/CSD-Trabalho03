@@ -1,83 +1,8 @@
 #include <hf-risc.h>
 #include "vga_drv.h"
+#include "space_invaders.h"	
 
-/* sprites and sprite drawing */
-char monster1a[8][11] = {
-	{0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0},
-	{2, 0, 0, 2, 0, 0, 0, 2, 0, 0, 2},
-	{2, 0, 2, 2, 2, 2, 2, 2, 2, 0, 2},
-	{2, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0},
-	{0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0},
-	{0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0}
-};
-
-char monster1b[8][11] = {
-	{0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0},
-	{0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0},
-	{0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0},
-	{0, 2, 2, 0, 2, 2, 2, 0, 2, 2, 0},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 0, 2, 0, 0, 0, 0, 0, 2, 0, 2},
-	{0, 0, 0, 2, 2, 0, 2, 2, 0, 0, 0}
-};
-
-char earthprotector[8][11] = {
-	{0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0},
-	{0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0},
-	{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
-};
-
-char barrier0bl[8][11] = {
-	{0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2},
-	{0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2},
-	{0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}	
-};
-
-char barrier0al[8][11] = {
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0},
-	{2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0},
-	{2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0},
-	{2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0}	
-};
-
-char barrier0ar[8][11] = {
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2},
-	{0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2},
-	{0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2},
-	{0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2}	
-};
-char barrier0br[8][11] = {
-	{2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0},
-	{2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}	
-};
-
+// Sprites are inside "space_invaders.h"
 
 void draw_sprite(unsigned int x, unsigned int y, char *sprite,
 	unsigned int sizex, unsigned int sizey, int color)
@@ -108,6 +33,8 @@ struct object_s {
 };
 
 
+
+
 void init_object(struct object_s *obj, char *spritea, char *spriteb,
 	char *spritec, char spriteszx, char spriteszy, int posx, int posy, 
 	int dx, int dy, int spx, int spy)
@@ -128,6 +55,7 @@ void init_object(struct object_s *obj, char *spritea, char *spriteb,
 	obj->speedycnt = spy;
 }
 
+//Draw Object on Screen
 void draw_object(struct object_s *obj, char chgsprite, int color)
 {
 	if (chgsprite) {
@@ -140,6 +68,7 @@ void draw_object(struct object_s *obj, char chgsprite, int color)
 		obj->spriteszx, obj->spriteszy, color);
 }
 
+//Move Object on Screen
 void move_object(struct object_s *obj)
 {
 	struct object_s oldobj;
@@ -195,7 +124,36 @@ int get_input()
 }
 
 //----------------------------------------------------------------------------------------------------
+//              PLAYER SCORE
+
+void player_score_converter(int score_value, char * score_string){
+	int value01 = score_value % 10;
+	int value02 = (score_value / 10) % 10;
+	int value03 = (score_value / 100) % 10;
+	int value04 = score_value / 1000; 
+
+	score_string[3] = '0' + value01;
+	score_string[2] = '0' + value02;
+	score_string[1] = '0' + value03;
+	score_string[0] = '0' + value04;
+}
+
+//----------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------
 //              PLAYER MOVEMENT
+
+int check_screen_limits(struct object_s *obj, int speedX, int speedY){
+	if(obj->posx + speedX <= 0){
+		return 0;
+	}else if(obj->posx + speedX >= 288){
+		return 0;
+	}else if(obj->posy + speedY <= 0){
+		return 0;
+	}else if(obj->posy + speedY >= 209){
+		return 0;
+	}
+	return 1;
+}
 
 void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired, int keyboard_input){
     obj->dx = 0;
@@ -205,7 +163,9 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
         if((keyboard_input & KEY_RIGHT)){
             obj->dx = 0;
         }else{
-            obj->dx = -speedXDesired;
+			if(check_screen_limits(obj, -speedXDesired, 0)){
+            	obj->dx = -speedXDesired;
+			}
         }
     }
 
@@ -213,7 +173,9 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
         if((keyboard_input & KEY_LEFT)){
             obj->dx = 0;
         }else{
-            obj->dx = speedXDesired;
+			if(check_screen_limits(obj, speedXDesired, 0)){
+            	obj->dx = speedXDesired;
+			}
         }
     }
 
@@ -221,7 +183,9 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
         if((keyboard_input & KEY_UP) != 0){
             obj->dy = 0;
         }else{
-            obj->dy = speedYDesired;
+			if(check_screen_limits(obj, 0, speedYDesired)){
+            	obj->dy = speedYDesired;
+			}
         }
     }
 
@@ -229,51 +193,67 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
         if((keyboard_input & KEY_DOWN) != 0){
             obj->dy = 0;
         }else{
-            obj->dy = -speedYDesired;
+			if(check_screen_limits(obj, 0, -speedYDesired)){
+            	obj->dy = -speedYDesired;
+			}
         }
     }
 }
 
+//----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
 
 /* main game loop */
 int main(void)
 {
 	struct object_s enemy1, enemy2, earthprotector_obj;
-	struct object_s barrier_l1, barrier_l2, barrier_r1, barrier_r2;
+	struct object_s player_projectile;
+
+	//struct object_s barrier_l1, barrier_l2, barrier_r1, barrier_r2;
 
 	init_display();
 	init_input();
 
-	init_object(&enemy1, monster1a[0], monster1b[0], 0, 11, 8, 30, 35, 1, 1, 3, 3);
-	init_object(&earthprotector_obj, earthprotector[0], 0, 0, 11, 8, 150, 206, 1, 1, 3, 3);
+	init_object(&enemy1, 			 alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  30,  35, 1,  1, 3, 3);
+	init_object(&earthprotector_obj, earthprotector[0],   0, 			       0, 11, 8, 150, 206, 1,  1, 2, 2);
+	init_object(&player_projectile,  player_shoot[0],     0,                   0, 11, 8, 155, 192, 0, -1, 0, 2);
 
-	init_object(&barrier_l1, barrier0al[0], 0, 0, 11, 8, 150, 196, 0, 0, 1, 1);
-	init_object(&barrier_r1, barrier0ar[0], 0, 0, 11, 8, 161, 196, 0, 0, 1, 1);
-	init_object(&barrier_l2, barrier0bl[0], 0, 0, 11, 8, 150, 188, 0, 0, 1, 1);
-	init_object(&barrier_r2, barrier0br[0], 0, 0, 11, 8, 161, 188, 0, 0, 1, 1);
+	//init_object(&barrier_l1, barrier0al[0], 0, 0, 11, 8, 150, 196, 0, 0, 1, 1);
+	//init_object(&barrier_r1, barrier0ar[0], 0, 0, 11, 8, 161, 196, 0, 0, 1, 1);
+	//init_object(&barrier_l2, barrier0bl[0], 0, 0, 11, 8, 150, 188, 0, 0, 1, 1);
+	//init_object(&barrier_r2, barrier0br[0], 0, 0, 11, 8, 161, 188, 0, 0, 1, 1);
 
 	int input_var;
-	int speedXPlayer = 0;
-	int speedYPlayer = 0;
+	int speedXPlayer = 3;
+	int speedYPlayer = 0;	//Player dont move vertically
+
+	int  playerLives  =    3;
+	int  playerScore  = 1234;
+	int  highestScore =    0;
+	char playerScore_String[5]  = "0000\0";
+	char highestScore_String[5] = "0000\0";
 
 	while (1) {
+		display_print("SCORE<1>",  30,  5, 1, WHITE);
+		display_print("HI-SCORE", 120,  5, 1, WHITE);
+		display_print("SCORE<2>", 210,  5, 1, WHITE);
+		player_score_converter(playerScore, playerScore_String);
+		player_score_converter(highestScore, highestScore_String);
+		display_print(playerScore_String,   45, 20, 1, WHITE);
+		display_print(highestScore_String, 135, 20, 1 , WHITE);
+		
+
 		move_object(&enemy1);
 		move_object(&enemy2);
-
-		move_object(&barrier_l1);
-		move_object(&barrier_r1);
-		move_object(&barrier_l2);
-		move_object(&barrier_r2);
+		move_object(&player_projectile);
 
 		input_var = get_input();
 
-        player_controls(&earthprotector_obj, 1, 1, input_var);
+        player_controls(&earthprotector_obj, speedXPlayer, speedYPlayer, input_var);
 
 		move_object(&earthprotector_obj);
 		
 		// you can change the direction, speed, etc...
-		
 		delay_ms(40);
 	}
 
