@@ -1,13 +1,15 @@
 #include <hf-risc.h>
 #include "vga_drv.h"
 #include "space_invaders.h"	
-
 // Sprites are inside "space_invaders.h"
 
 //----------------------------------------------------------------------------------------------------
 //GLOBAL VARIABLES
 int  playerScore  =  690;
 int  highestScore =    0;
+
+#define ENEMIES_LIN     5 
+#define ENEMIES_COL    11 
 
 //----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
@@ -38,12 +40,15 @@ struct object_s {
 	int dx, dy;
 	int speedx, speedy;
 	int speedxcnt, speedycnt;
-};
 
+	unsigned int isAlive;
+	unsigned int isProjectile;
+	unsigned int isVisible;
+};
 
 void init_object(struct object_s *obj, char *spritea, char *spriteb,
 	char *spritec, char spriteszx, char spriteszy, int posx, int posy, 
-	int dx, int dy, int spx, int spy)
+	int dx, int dy, int spx, int spy, int alive, int proj, int visible)
 {
 	obj->sprite_frame[0] = spritea;
 	obj->sprite_frame[1] = spriteb;
@@ -59,6 +64,10 @@ void init_object(struct object_s *obj, char *spritea, char *spriteb,
 	obj->speedy = spy;
 	obj->speedxcnt = spx;
 	obj->speedycnt = spy;
+
+	obj->isProjectile = proj;
+	obj->isAlive = alive;
+	obj->isVisible = visible;
 }
 
 //Draw Object on Screen
@@ -131,6 +140,31 @@ int get_input()
 
 //----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
+//              PROJECTILE LOGIC
+
+void instantiate_projectile(struct object_s *projectile, int speedY, int posX, int posY){
+	projectile->dy     = speedY;
+	projectile->isVisible = 1;
+}
+
+void destroy_projectile(struct object_s *projectile){
+	projectile->dy = 0;
+	projectile->isVisible = 0;
+	projectile->posx = 40;
+	projectile->posy = 40;
+	draw_object(projectile, 0, 0);
+}
+
+int verifyProjectilePos(struct object_s *projectile){
+	if(projectile->posy + projectile->dy <= 40 || projectile->posy + projectile->dy >= 196){
+		return 1;
+	}
+
+	return 0;
+}
+
+//----------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------
 //              PLAYER SCORE
 
 void player_score_converter(int score_value, char * score_string){
@@ -162,7 +196,7 @@ int check_screen_limits(struct object_s *obj, int speedX, int speedY){
 	return 1;
 }
 
-void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired, int keyboard_input){
+void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired, int keyboard_input, struct object_s *proj){
     obj->dx = 0;
     obj->dy = 0;
 
@@ -201,10 +235,14 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
             obj->dy = 0;
         }else{
 			if(check_screen_limits(obj, 0, -speedYDesired)){
-            	obj->dy = -speedYDesired;
+                obj->dy = -speedYDesired;
 			}
         }
     }
+
+	if((keyboard_input & KEY_CENTER) != 0){
+		instantiate_projectile(proj, -5, obj->posx + 6, obj->posy - 10);
+	}
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -216,11 +254,63 @@ void move_enemy(struct object_s *obj){
 		obj->dx = -obj->dx;
 		obj->dy = 13;
 		obj->speedycnt = 1;
-		move_object(obj);
+		move_object(obj);		
+		obj->dy = 13;
 		obj->speedycnt = 0;
 	}else{
 		obj->dy = 0;	
 	}
+}
+
+void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport){
+    if(*teleport == 1 || *teleport == 2) {
+        for(int i=0; i<ENEMIES_LIN; i++) {
+            for(int j=0; j<ENEMIES_COL; j++) {
+                 obj[i][j].dy = (*teleport == 2)? -50 : 13;
+                 obj[i][j].speedycnt = 1;
+            }
+        }
+
+        *teleport = 0;
+    }
+    else {
+		int reached_barrier = 0;
+		int reached_ground = 0;
+		for(int i = 0; i < ENEMIES_LIN; i++){
+			for(int j = 0; j < ENEMIES_COL; j++){
+				if(obj[i][j].posx + obj[i][j].dx >= 288 || obj[i][j].posx + obj[i][j].dx <= 0){
+					reached_barrier = 1;
+
+					if(obj[i][j].posy + obj[i][j].dy >= 90){
+						reached_ground = 1;
+					}
+					break;
+				}
+			}
+			if(reached_barrier || reached_ground) break;
+		}
+
+       if(reached_barrier){
+            for(int i=0; i<ENEMIES_LIN; i++) {
+                for(int j=0; j<ENEMIES_COL; j++) {
+                    obj[i][j].dx = -obj[i][j].dx;
+                }    
+            }
+
+			if(reached_ground == 1){
+				*teleport = 2;
+			}else{
+				*teleport = 1;
+			}
+        } else {
+            for(int i=0; i<ENEMIES_LIN; i++) {
+                for(int j=0; j<ENEMIES_COL; j++) {
+                    obj[i][j].speedycnt = 5;
+                    obj[i][j].dy = 0;
+                }
+            }
+        }
+    }
 }
 
 void set_enemies_speed(struct object_s *obj, int speedDesired, int enemy_amount){
@@ -234,19 +324,26 @@ void set_enemies_speed(struct object_s *obj, int speedDesired, int enemy_amount)
 /* main game loop */
 int main(void)
 {
+    struct object_s enemies[ENEMIES_LIN][ENEMIES_COL];
+
 	struct object_s earthprotector_obj;	//Player
 	struct object_s enemy[11];
-	//struct object_s player_projectile;
+
+	struct object_s player_projectile;
 
 	//struct object_s barrier_l1, barrier_l2, barrier_r1, barrier_r2;
 
 	init_display();
 	init_input();
 
-	init_object(&enemy[0], 			 alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  30,  35, 1,  3, 10, 10);
-	init_object(&enemy[1], 			 alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  46,  35, 1,  3, 10, 10);
-	init_object(&earthprotector_obj, earthprotector[0],   0, 			       0, 11, 8, 150, 186, 1,  0,  2,  2);
-	//init_object(&player_projectile,  player_shoot[0],     0,                   0, 11, 8, 155, 172, 0, -1, 0, 1);
+    // enemies initialization 
+	for(int i=0; i<ENEMIES_LIN; i++) {
+		for(int j=0; j<ENEMIES_COL; j++) 
+			init_object(&enemies[i][j], alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  18 + 15*(j+1),  18 + 12*(i+1), 5,  0, 5, 5, 1, 0, 1);
+	}
+
+	init_object(&earthprotector_obj, earthprotector[0],   0, 			       0, 11, 8, 150, 186, 1,  0,  2,  2, 1, 0, 1);
+	init_object(&player_projectile,  player_shoot[0],     0,                   0, 11, 8, 155, 172, 0, -1, 0, 1, 0, 1, 0);
 
 	//init_object(&barrier_l1, barrier0al[0], 0, 0, 11, 8, 150, 196, 0, 0, 1, 1);
 	//init_object(&barrier_r1, barrier0ar[0], 0, 0, 11, 8, 161, 196, 0, 0, 1, 1);
@@ -278,14 +375,42 @@ int main(void)
 	//void display_hline(uint16_t x0, uint16_t y0, uint16_t length, uint16_t color);
 	display_hline(0, 196, 300, 7);
 
+    int teleport = 0;
+
 	while (1){
-		move_object(&enemy[0]);
-		move_object(&enemy[1]);
+		// move_enemy(&enemy[0]);
+		// move_enemy(&enemy[1]);
+
+		// move_object(&enemy[0]);
+		// move_object(&enemy[1]);
 		//move_object(&player_projectile);
 
+       // for(int i=0; i<ENEMIES_LIN; i++) {
+       //     for(int j=0; j<ENEMIES_COL; j++)
+       //         move_enemy(&enemies[i][j]);
+       // }
+
+        move_enemies(enemies, &teleport);
+
+        for(int i=0; i<ENEMIES_LIN; i++) {
+            for(int j=0; j<ENEMIES_COL; j++)
+                move_object(&enemies[i][j]);
+        }
+        
 		input_var = get_input();
-        player_controls(&earthprotector_obj, speedPlayer, 0, input_var);
+        player_controls(&earthprotector_obj, speedPlayer, 0, input_var, &player_projectile);
 		move_object(&earthprotector_obj);
+
+		if(player_projectile.isVisible != 0){
+			int limit = verifyProjectilePos(&player_projectile);
+			if(limit == 0){
+				move_object(&player_projectile);
+			}else{
+				destroy_projectile(&player_projectile);
+			}
+		}else{
+			
+		}
 		
 		// you can change the direction, speed, etc...
 		delay_ms(40);
