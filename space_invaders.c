@@ -4,16 +4,21 @@
 // Sprites are inside "space_invaders.h"
 
 //----------------------------------------------------------------------------------------------------
-//GLOBAL VARIABLES
+//					GLOBAL VARIABLES
+//----------------------------------------------------------------------------------------------------
 int  playerScore  =  690;
 int  highestScore =    0;
 
-#define ENEMIES_LIN     1 
+#define ENEMIES_LIN     5 
 #define ENEMIES_COL    11 
 
-//----------------------------------------------------------------------------------------------------
+#define ENEMIES_SPEED  10 
+
+int killed[ENEMIES_LIN][ENEMIES_COL] = {0};
+
 //----------------------------------------------------------------------------------------------------
 // 											BASE CODE
+//----------------------------------------------------------------------------------------------------
 
 void draw_sprite(unsigned int x, unsigned int y, char *sprite,
 	unsigned int sizex, unsigned int sizey, int color)
@@ -62,7 +67,7 @@ void init_object(struct object_s *obj, char *spritea, char *spriteb,
 	obj->speedycnt = spy;
 }
 
-//Draw Object on Screen
+// draw object on Screen
 void draw_object(struct object_s *obj, char chgsprite, int color)
 {
 	if (chgsprite) {
@@ -75,7 +80,7 @@ void draw_object(struct object_s *obj, char chgsprite, int color)
 		obj->spriteszx, obj->spriteszy, color);
 }
 
-//Move Object on Screen
+// move object on Screen
 void move_object(struct object_s *obj)
 {
 	struct object_s oldobj;
@@ -131,8 +136,8 @@ int get_input()
 }
 
 //----------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------
 //              PLAYER SCORE
+//----------------------------------------------------------------------------------------------------
 
 void player_score_converter(int score_value, char * score_string){
 	int value01 = score_value % 10;
@@ -147,8 +152,8 @@ void player_score_converter(int score_value, char * score_string){
 }
 
 //----------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------
 //              PLAYER MOVEMENT
+//----------------------------------------------------------------------------------------------------
 
 int check_screen_limits(struct object_s *obj, int speedX, int speedY){
 	if(obj->posx + speedX <= 0){
@@ -209,25 +214,12 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
 }
 
 //----------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------
 //    			BASIC ENEMY MOVEMENT
+//----------------------------------------------------------------------------------------------------
 
-void move_enemy(struct object_s *obj){
-	if(obj->posx + obj->dx >= 288 || obj->posx + obj->dx <= 0){
-		obj->dx = -obj->dx;
-		obj->dy = 13;
-		obj->speedycnt = 1;
-		move_object(obj);		obj->dy = 13;
+void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* move_down){
 
-		obj->speedycnt = 0;
-	}else{
-		obj->dy = 0;	
-	}
-}
-
-void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport){
-
-    if(*teleport == 1) {
+    if(*move_down == 1) {
         for(int i=0; i<ENEMIES_LIN; i++) {
             for(int j=0; j<ENEMIES_COL; j++) {
                  obj[i][j].dy = 13;
@@ -235,19 +227,19 @@ void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport){
             }    
         }
 
-        *teleport = 0;
+        *move_down = 0;
     }
     else {
         if((obj[0][ENEMIES_COL-1].posx + obj[0][ENEMIES_COL-1].dx >= 288) || (obj[0][0].posx + obj[0][0].dx <= 3)){
             for(int i=0; i<ENEMIES_LIN; i++) {
                 for(int j=0; j<ENEMIES_COL; j++) {
                     obj[i][j].dx = -obj[i][j].dx;
-                    // teleport 
+                    // move_down 
                     //move_object(&obj[i][j]);		
                 }    
             }
 
-            *teleport = 1;
+            *move_down = 1;
         } else {
             for(int i=0; i<ENEMIES_LIN; i++) {
                 for(int j=0; j<ENEMIES_COL; j++) {
@@ -259,10 +251,19 @@ void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport){
     }
 }
 
-void set_enemies_speed(struct object_s *obj, int speedDesired, int enemy_amount){
-	for(int i = 0; i < enemy_amount; i++){
-		obj[i].dx = speedDesired;
+void draw_enemies(struct object_s enemies[ENEMIES_LIN][ENEMIES_COL]) {
+	for(int i=0; i<ENEMIES_LIN; i++) {
+		for(int j=0; j<ENEMIES_COL; j++)
+			move_object(&enemies[i][j]);
 	}
+}
+//----------------------------------------------------------------------------------------------------
+//				SCOREBOARD
+//----------------------------------------------------------------------------------------------------
+void draw_scoreboard() {
+	display_print("SCORE<1>",  30,  5, 1, WHITE);
+	display_print("HI-SCORE", 120,  5, 1, WHITE);
+	display_print("SCORE<2>", 210,  5, 1, WHITE);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -270,27 +271,26 @@ void set_enemies_speed(struct object_s *obj, int speedDesired, int enemy_amount)
 /* main game loop */
 int main(void)
 {
+    // enemies initialization 
     struct object_s enemies[ENEMIES_LIN][ENEMIES_COL];
+	for(int i=0; i<ENEMIES_LIN; i++) {
+		for(int j=0; j<ENEMIES_COL; j++) 
+			init_object(&enemies[i][j], alien01_moving_a[0], alien01_moving_b[0], 
+						0, 11, 8,  18 + 15*(j+1),  18 + 12*(i+1), 10,  0, ENEMIES_SPEED, 10);
+	}
 
-	struct object_s earthprotector_obj;	//Player
-	struct object_s enemy[11];
-	//struct object_s player_projectile;
+	// player initialization 
+	struct object_s spaceship_obj;	
+	init_object(&spaceship_obj, spaceship[0],   0, 	0, 11, 8, 150, 186, 1,  0,  2,  2);
+
+	// projectile initialization 
+	struct object_s player_shot_obj;
+	init_object(&player_shot_obj, player_shot[0],   0, 	0, 11, 8, 150, 186, 1,  0,  2,  2);
 
 	//struct object_s barrier_l1, barrier_l2, barrier_r1, barrier_r2;
 
 	init_display();
 	init_input();
-
-    // enemies initialization 
-	for(int i=0; i<ENEMIES_LIN; i++) {
-		for(int j=0; j<ENEMIES_COL; j++) 
-			init_object(&enemies[i][j], alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  18 + 15*(j+1),  18 + 12*(i+1), 10,  0, 10, 10);
-	}
-
-	// init_object(&enemy[0], 			 alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  30,  35, 1,  3, 10, 10);
-	// init_object(&enemy[1], 			 alien01_moving_a[0], alien01_moving_b[0], 0, 11, 8,  46,  35, 1,  3, 10, 10);
-	init_object(&earthprotector_obj, earthprotector[0],   0, 			       0, 11, 8, 150, 186, 1,  0,  2,  2);
-	//init_object(&player_projectile,  player_shoot[0],     0,                   0, 11, 8, 155, 172, 0, -1, 0, 1);
 
 	//init_object(&barrier_l1, barrier0al[0], 0, 0, 11, 8, 150, 196, 0, 0, 1, 1);
 	//init_object(&barrier_r1, barrier0ar[0], 0, 0, 11, 8, 161, 196, 0, 0, 1, 1);
@@ -305,10 +305,7 @@ int main(void)
 	char playerScore_String[5]  = "0000\0";
 	char highestScore_String[5] = "0000\0";
 
-	//Itens Fixos na Tela
-	display_print("SCORE<1>",  30,  5, 1, WHITE);
-	display_print("HI-SCORE", 120,  5, 1, WHITE);
-	display_print("SCORE<2>", 210,  5, 1, WHITE);
+	draw_scoreboard();
 
 	//display_frectangle(155, 155, 5, 150, BLUE);
 
@@ -317,36 +314,18 @@ int main(void)
 	player_score_converter(playerScore, playerScore_String);
 	player_score_converter(highestScore, highestScore_String);
 
-	set_enemies_speed(enemy, speedEnemy, 11);
-
 	//void display_hline(uint16_t x0, uint16_t y0, uint16_t length, uint16_t color);
 	display_hline(0, 196, 300, 7);
 
-    int teleport = 0;
+    int move_down = 0;
 
 	while (1){
-		// move_enemy(&enemy[0]);
-		// move_enemy(&enemy[1]);
-
-		// move_object(&enemy[0]);
-		// move_object(&enemy[1]);
-		//move_object(&player_projectile);
-
-       // for(int i=0; i<ENEMIES_LIN; i++) {
-       //     for(int j=0; j<ENEMIES_COL; j++)
-       //         move_enemy(&enemies[i][j]);
-       // }
-
-        move_enemies(enemies, &teleport);
-
-        for(int i=0; i<ENEMIES_LIN; i++) {
-            for(int j=0; j<ENEMIES_COL; j++)
-                move_object(&enemies[i][j]);
-        }
+        move_enemies(enemies, &move_down);
+		draw_enemies(enemies);
         
 		input_var = get_input();
-        player_controls(&earthprotector_obj, speedPlayer, 0, input_var);
-		move_object(&earthprotector_obj);
+        player_controls(&spaceship_obj, speedPlayer, 0, input_var);
+		move_object(&spaceship_obj);
 		
 		// you can change the direction, speed, etc...
 		delay_ms(40);
