@@ -260,6 +260,11 @@ void draw_enemies(struct object_s enemies[ENEMIES_LIN][ENEMIES_COL]) {
 //----------------------------------------------------------------------------------------------------
 //				SCOREBOARD
 //----------------------------------------------------------------------------------------------------
+
+//	int pts;
+//  char buff[20];
+//  sprintf(buff, "%5d", pts);
+
 void draw_scoreboard() {
 	display_print("SCORE<1>",  30,  5, 1, WHITE);
 	display_print("HI-SCORE", 120,  5, 1, WHITE);
