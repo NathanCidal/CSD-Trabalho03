@@ -5,8 +5,10 @@
 
 //----------------------------------------------------------------------------------------------------
 //GLOBAL VARIABLES
-int  playerScore  =  690;
-int  highestScore =    0;
+int  playerScore  =    0;
+int  highestScore =  690;
+char playerScore_String[5]  = "0000\0";
+char highestScore_String[5] = "0000\0";
 
 #define ENEMIES_LIN     5 
 #define ENEMIES_COL    11 
@@ -139,20 +141,65 @@ int get_input()
 }
 
 //----------------------------------------------------------------------------------------------------
+// 											PROTOTYPING FUNCTIONS
+
+void destroy_projectile();
+void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport);
+void update_high_score();
+void player_score_converter(int score_value, char * score_string);
+
+//----------------------------------------------------------------------------------------------------
+//              COLLISION LOGIC
+
+int check_collision_between(struct object_s * obj1, struct object_s * obj2){
+	if(obj1->posx + obj1->dx >= obj2->posx && obj1->posx + obj1->dx <= obj2->posx + obj2->spriteszx){
+		if(obj1->posy + obj1->dy >= obj2->posy && obj1->posy + obj1->dy <= obj2->posy + obj2->spriteszy){
+
+			if(obj2->isAlive == 1 && obj2->isProjectile == 0)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+void verify_projectile_collision_enemies(struct object_s * proj, struct object_s enemies[ENEMIES_LIN][ENEMIES_COL]){
+	int verify = 0;
+	for(int i = 0; i < ENEMIES_LIN; i++){
+		for(int j = 0; j < ENEMIES_COL; j++){
+			verify = check_collision_between(proj, &enemies[i][j]);
+
+			if(verify){
+				enemies[i][j].isAlive = 0;
+				destroy_projectile(proj);
+				playerScore += 100;
+				update_high_score();
+				display_frectangle(45, 20, 150, 10, BLACK);
+				player_score_converter(playerScore, playerScore_String);
+				player_score_converter(highestScore, highestScore_String);
+				display_print(playerScore_String,   45, 20, 1, WHITE);
+				display_print(highestScore_String, 135, 20, 1 , WHITE);
+			}
+		}
+	}
+}
+
+//----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
 //              PROJECTILE LOGIC
 
 void instantiate_projectile(struct object_s *projectile, int speedY, int posX, int posY){
 	projectile->dy     = speedY;
+	projectile->posx   = posX;
+	projectile->posy   = posY;
 	projectile->isVisible = 1;
 }
 
 void destroy_projectile(struct object_s *projectile){
+	draw_object(projectile, 1, 0);
 	projectile->dy = 0;
 	projectile->isVisible = 0;
 	projectile->posx = 40;
 	projectile->posy = 40;
-	draw_object(projectile, 0, 0);
 }
 
 int verifyProjectilePos(struct object_s *projectile){
@@ -177,6 +224,12 @@ void player_score_converter(int score_value, char * score_string){
 	score_string[2] = '0' + value02;
 	score_string[1] = '0' + value03;
 	score_string[0] = '0' + value04;
+}
+
+void update_high_score(){
+	if(highestScore < playerScore){
+		highestScore = playerScore;
+	}
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -240,7 +293,7 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
         }
     }
 
-	if((keyboard_input & KEY_CENTER) != 0){
+	if((keyboard_input & KEY_CENTER && !proj->isVisible) != 0){
 		instantiate_projectile(proj, -5, obj->posx + 6, obj->posy - 10);
 	}
 }
@@ -249,17 +302,28 @@ void player_controls(struct object_s *obj, int speedXDesired, int speedYDesired,
 //----------------------------------------------------------------------------------------------------
 //    			BASIC ENEMY MOVEMENT
 
-void move_enemy(struct object_s *obj){
-	if(obj->posx + obj->dx >= 288 || obj->posx + obj->dx <= 0){
-		obj->dx = -obj->dx;
-		obj->dy = 13;
-		obj->speedycnt = 1;
-		move_object(obj);		
-		obj->dy = 13;
-		obj->speedycnt = 0;
-	}else{
-		obj->dy = 0;	
-	}
+void enemy_controller(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport, struct object_s * enemy_explosion_prefab){
+	move_enemies(obj, teleport);
+
+	draw_object(enemy_explosion_prefab, 1, 0);
+	enemy_explosion_prefab->posx = 0;
+	enemy_explosion_prefab->posy = 0;
+
+	for(int i=0; i<ENEMIES_LIN; i++) {
+        for(int j=0; j<ENEMIES_COL; j++){
+			if(obj[i][j].isAlive){
+				move_object(&obj[i][j]);
+			}else if(obj[i][j].isVisible){
+				draw_object(&obj[i][j], 2, 0);
+				enemy_explosion_prefab->posx = obj[i][j].posx;
+				enemy_explosion_prefab->posy = obj[i][j].posy;
+				draw_object(&obj[i][j], 2, 0);
+				draw_object(enemy_explosion_prefab, 0, -1);
+				obj[i][j].isVisible = 0;
+			}
+        }
+    }
+
 }
 
 void move_enemies(struct object_s obj[ENEMIES_LIN][ENEMIES_COL], int* teleport){
@@ -330,6 +394,7 @@ int main(void)
 	struct object_s enemy[11];
 
 	struct object_s player_projectile;
+	struct object_s alien_explosion_obj;
 
 	//struct object_s barrier_l1, barrier_l2, barrier_r1, barrier_r2;
 
@@ -344,6 +409,7 @@ int main(void)
 
 	init_object(&earthprotector_obj, earthprotector[0],   0, 			       0, 11, 8, 150, 186, 1,  0,  2,  2, 1, 0, 1);
 	init_object(&player_projectile,  player_shoot[0],     0,                   0, 11, 8, 155, 172, 0, -1, 0, 1, 0, 1, 0);
+	init_object(&alien_explosion_obj, alien_explosion[0], 0,                   0, 11, 8, 0,     0, 0,  0, 0, 0, 0, 0, 0);
 
 	//init_object(&barrier_l1, barrier0al[0], 0, 0, 11, 8, 150, 196, 0, 0, 1, 1);
 	//init_object(&barrier_r1, barrier0ar[0], 0, 0, 11, 8, 161, 196, 0, 0, 1, 1);
@@ -355,8 +421,6 @@ int main(void)
 	int speedEnemy  = 6;
 
 	int  playerLives  =    3;
-	char playerScore_String[5]  = "0000\0";
-	char highestScore_String[5] = "0000\0";
 
 	//Itens Fixos na Tela
 	display_print("SCORE<1>",  30,  5, 1, WHITE);
@@ -365,10 +429,10 @@ int main(void)
 
 	//display_frectangle(155, 155, 5, 150, BLUE);
 
-	display_print(playerScore_String,   45, 20, 1, WHITE);
-	display_print(highestScore_String, 135, 20, 1 , WHITE);
 	player_score_converter(playerScore, playerScore_String);
 	player_score_converter(highestScore, highestScore_String);
+	display_print(playerScore_String,   45, 20, 1, WHITE);
+	display_print(highestScore_String, 135, 20, 1 , WHITE);
 
 	set_enemies_speed(enemy, speedEnemy, 11);
 
@@ -390,26 +454,20 @@ int main(void)
        //         move_enemy(&enemies[i][j]);
        // }
 
-        move_enemies(enemies, &teleport);
-
-        for(int i=0; i<ENEMIES_LIN; i++) {
-            for(int j=0; j<ENEMIES_COL; j++)
-                move_object(&enemies[i][j]);
-        }
+		verify_projectile_collision_enemies(&player_projectile, enemies);
+		enemy_controller(enemies, &teleport, &alien_explosion_obj);
         
 		input_var = get_input();
         player_controls(&earthprotector_obj, speedPlayer, 0, input_var, &player_projectile);
 		move_object(&earthprotector_obj);
 
-		if(player_projectile.isVisible != 0){
+		if(player_projectile.isVisible){
 			int limit = verifyProjectilePos(&player_projectile);
 			if(limit == 0){
 				move_object(&player_projectile);
 			}else{
 				destroy_projectile(&player_projectile);
 			}
-		}else{
-			
 		}
 		
 		// you can change the direction, speed, etc...
