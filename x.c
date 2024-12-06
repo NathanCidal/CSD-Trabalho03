@@ -1,3 +1,5 @@
+// ANTONIO DOS SANTOS E NATHAN CIDAL - T3 CSD - SPACE INVADERS
+
 #include <hf-risc.h>
 
 #include "vga_drv.h"
@@ -14,14 +16,6 @@ typedef struct {
     int alive;
     int visible;
 } object_s;
-
-typedef struct {
-    int xo;
-    int yo;
-    int w;
-    int h;
-    int hp;
-} barrier_t;
 
 //----------------------------------------------------------------------------------------------------
 //                              GLOBAL VARIABLES
@@ -42,10 +36,6 @@ object_s enemy_explosion_obj;
 object_s player_death_obj;
 
 object_s hearts[3];
-
-barrier_t b1 = {WIDTH*0.10, HEIGHT*0.7, 50, 15, 4};
-barrier_t b2 = {WIDTH*0.45, HEIGHT*0.7, 50, 15, 4};
-barrier_t b3 = {WIDTH*0.80, HEIGHT*0.7, 50, 15, 4};
 
 int score = 0;
 const int player_speed = 5;
@@ -143,8 +133,18 @@ int check_y(const object_s* obj) {
     return (py <= 18 || py >= 210);
 }
 
-int check_screen_limits(const object_s* obj) {
-    return !(check_x(obj) || check_y(obj));
+int check_screen_limits(const object_s* obj, const int speedx, const int speedy) {
+//    return !(check_x(obj, speedx) || check_y(obj));
+        if(obj->posx + speedx <= 0){
+            return 0;
+        }else if(obj->posx + speedx >= 288){
+            return 0;
+        }else if(obj->posy + speedy <= 0){
+            return 0;
+        }else if(obj->posy + speedy >= 209){
+            return 0;
+        }
+    return 1;
 }
 
 void init_display() {
@@ -261,7 +261,7 @@ void player_controls(const int input){
             earthprotector_obj.dx = 0;
         }
         else {
-            if(check_screen_limits(&earthprotector_obj)) {
+            if(check_screen_limits(&earthprotector_obj, -player_speed, 0)) {
                 earthprotector_obj.dx = -player_speed;
             }
         }
@@ -272,7 +272,7 @@ void player_controls(const int input){
         if(input & KEY_LEFT) {
             earthprotector_obj.dx = 0;
         }
-        else if(check_screen_limits(&earthprotector_obj)) {
+        else if(check_screen_limits(&earthprotector_obj, player_speed, 0)) {
             earthprotector_obj.dx = player_speed;
         }
     } 
@@ -295,7 +295,7 @@ void enemies_init()
                 alien02_moving_a[0], alien02_moving_b[0], 0,                     
                 11, 8,                  
                 18 + 15*(j+1), 18 + 12*(i+1),          
-                0, 0, 10, 10, 1, 1
+                5, 0, 10, 10, 1, 1
             );
 
             init_object(
@@ -313,7 +313,7 @@ void enemies_init()
                 alien01_moving_a[0], alien01_moving_b[0], 0,                     
                 11, 8,                  
                 18 + 15*(j+1),  18 + 12*(i+1),          
-                0, 0, 10, 10, 1, 1
+                5, 0, 10, 10, 1, 1
             );
 
             init_object(
@@ -331,7 +331,7 @@ void enemies_init()
                 alien01_moving_a[0], alien01_moving_b[0], 0,                     
                 11, 8,                  
                 18 + 15*(j+1),  18 + 12*(i+1),          
-                0, 0, 10, 10, 1, 1
+                5, 0, 10, 10, 1, 1
             );
 
             init_object(
@@ -349,7 +349,7 @@ void enemies_init()
                 alien03_moving_a[0], alien03_moving_b[0], 0,                     
                 11, 8,                  
                 18 + 15*(j+1),  18 + 12*(i+1),          
-                0, 0, 10, 10, 1, 1
+                5, 0, 10, 10, 1, 1
             );
 
             init_object(
@@ -367,7 +367,7 @@ void enemies_init()
                 alien03_moving_a[0], alien03_moving_b[0], 0,                     
                 11, 8,                  
                 18 + 15*(j+1),  18 + 12*(i+1),          
-                0, 0, 10, 10, 1, 1
+                5, 0, 10, 10, 1, 1
             );
 
             init_object(
@@ -384,7 +384,7 @@ void enemy_fire(const int i, const int j)
     const int r = random();
     
     if(enemies_proj[i][j].visible) {
-        if(check_screen_limits(&enemies_proj[i][j])) {
+        if(check_screen_limits(&enemies_proj[i][j], 0, enemies_proj[i][j].dy)) {
             move_object(&enemies_proj[i][j]);
         }
         else {
@@ -397,8 +397,6 @@ void enemy_fire(const int i, const int j)
             enemy_shots++;
             create_proj(&enemies_proj[i][j], enemies[i][j].posx + 5, 
                         enemies[i][j].posy + 10, 5);
-            //create_proj(&enemies_proj[i][j], enemies[i][j].posx + 6, 
-            //            enemies[i][j].posy + 10, 5);
         }
     }
 }
@@ -492,23 +490,9 @@ void restart()
     enemy_shots = 0;
 }
 
-void finish() {
-        display_print("GAME OVER",  WIDTH*0.35,  HEIGHT/2, 1, RED);
-}
-
-//-----------------------------------------------------------------------------
-//                          "BARRIER" LOGIC
-//-----------------------------------------------------------------------------
-void draw_barrier(const barrier_t* b, const int color) {
-    display_frectangle(b->xo, b->yo, b->w, b->h, color);
-}
-
-void check_barrier_hit(const object_s* proj, barrier_t* barr) {
-    if  (
-        (proj->posy + proj->spriteszy == barr->yo) &&
-        (proj->posx >= barr->xo) &&
-        (proj->posx <= barr->xo + barr->w)
-    ) { barr->hp--; }
+void finish(const int won) {
+        if(won) display_print("YOU WIN!", WIDTH*0.50, HEIGHT/2, 1, GREEN);
+        else display_print("GAME OVER",  WIDTH*0.35,  HEIGHT/2, 1, RED);
 }
 
 int main()
@@ -574,6 +558,7 @@ int main()
             0, 0
     );
 
+    // heart sprite
     for(int i=0; i<3; i++) {
         init_object(
                 &hearts[i], 
@@ -595,44 +580,17 @@ int main()
         const int status = player_death();
         display_scoreboard();
 
+        if(score == (ENEMIES_LIN*ENEMIES_COL*10)) {
+            finish(1);
+        }
+
         if(status == 1) {
             restart();
         }
         else if(status == 2) {
-            finish();
+            finish(0);
             break;
         }
-
-        for(int i=0; i<ENEMIES_LIN; i++) {
-            for(int j=0; j<ENEMIES_COL; j++) {
-               check_barrier_hit(&enemies_proj[i][j], &b1);
-               check_barrier_hit(&enemies_proj[i][j], &b2);
-               check_barrier_hit(&enemies_proj[i][j], &b3);
-            }
-        }
-
-        if(b1.hp > 0) {
-            draw_barrier(&b1, GREEN);
-        } else {
-            draw_barrier(&b1, BLACK);
-        }
-
-        if(b2.hp > 0) {
-            draw_barrier(&b2, GREEN);
-        } else {
-            draw_barrier(&b2, BLACK);
-        }
-
-        if(b3.hp > 0) {
-            draw_barrier(&b3, GREEN);
-        } else {
-            draw_barrier(&b3, BLACK);
-        }
-
-    //    move_object(&barrier1_l1);
-    //    move_object(&barrier1_r1);
-    //    move_object(&barrier1_l2);
-    //    move_object(&barrier1_r2);
 
         const int input = get_input();
         player_controls(input);
@@ -644,7 +602,7 @@ int main()
         draw_enemies();
 
         if(player_proj.visible) {
-            if(check_screen_limits(&player_proj)) {
+            if(check_screen_limits(&player_proj, 0, player_proj.dy)) {
                 move_object(&player_proj);
             }
             else {
