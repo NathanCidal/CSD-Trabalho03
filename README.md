@@ -1,11 +1,11 @@
 **CSD: Space Invaders on HF-RISCV**
   - [ ] Graphics
   - [ ] Movement and shooting
-  - [ ] Enemies
+  - [x] Enemies
   - [ ] Collisions
-  - [ ] Score
-  - [ ] Life System
+  - [x] Score
+  - [x] Life System
 
-**Version: 1.0**
+**Version: 1.1**
 
   Created on `11/22/2024`
