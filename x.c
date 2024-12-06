@@ -16,9 +16,12 @@ typedef struct {
 } object_s;
 
 typedef struct {
-    object_s l1, l2;
-    object_s r1, r2;
-} barrier_s;
+    int xo;
+    int yo;
+    int w;
+    int h;
+    int hp;
+} barrier_t;
 
 //----------------------------------------------------------------------------------------------------
 //                              GLOBAL VARIABLES
@@ -35,9 +38,14 @@ object_s enemies[ENEMIES_LIN][ENEMIES_COL];
 object_s enemies_proj[ENEMIES_LIN][ENEMIES_COL];
 object_s earthprotector_obj;
 object_s enemy_explosion_obj;
-barrier_s barriers[NUM_BARRIERS];
+
+object_s player_death_obj;
 
 object_s hearts[3];
+
+barrier_t b1 = {WIDTH*0.10, HEIGHT*0.7, 50, 15, 4};
+barrier_t b2 = {WIDTH*0.45, HEIGHT*0.7, 50, 15, 4};
+barrier_t b3 = {WIDTH*0.80, HEIGHT*0.7, 50, 15, 4};
 
 int score = 0;
 const int player_speed = 5;
@@ -278,111 +286,6 @@ void player_controls(const int input){
 //----------------------------------------------------------------------------------------
 //                                 ENEMY LOGIC
 //----------------------------------------------------------------------------------------
-void enemy_fire(const int i, const int j)
-{
-    const int r = random();
-    
-    if(enemies_proj[i][j].visible) {
-        if(check_screen_limits(&enemies_proj[i][j])) {
-            move_object(&enemies_proj[i][j]);
-        }
-        else {
-            destroy_proj(&enemies_proj[i][j]);
-            enemy_shots--;
-        }
-    }
-    else {
-        if(r % 333 == 0 && enemy_shots < max_enemy_shots) {
-            enemy_shots++;
-            create_proj(&enemies_proj[i][j], enemies[i][j].posx + 5, 
-                        enemies[i][j].posy + 10, 5);
-            //create_proj(&enemies_proj[i][j], enemies[i][j].posx + 6, 
-            //            enemies[i][j].posy + 10, 5);
-        }
-    }
-}
-
-void draw_enemies(){
-    const int out = check_x(&enemies[0][0]) || check_x(&enemies[0][ENEMIES_COL-1]);
-
-    draw_object(&enemy_explosion_obj, 1, 0);
-	enemy_explosion_obj.posx = 0;
-	enemy_explosion_obj.posy = 0;
-
-	for(int i=0; i<ENEMIES_LIN; i++) {
-        for(int j=0; j<ENEMIES_COL; j++){
-			if(enemies[i][j].alive) {
-                enemies[i][j].dy = out * 13;  
-                enemies[i][j].dx *= (1 - (out << 1)); 
-                enemies[i][j].speedycnt = (out) ? 1 : 5;
-				move_object(&enemies[i][j]);
-
-                enemy_fire(i, j);
-			}
-            else if(enemies[i][j].visible) {
-                // enemy death animation 
-				draw_object(&enemies[i][j], 2, 0);
-				enemy_explosion_obj.posx = enemies[i][j].posx;
-				enemy_explosion_obj.posy = enemies[i][j].posy;
-				draw_object(&enemies[i][j], 2, 0);
-				draw_object(&enemy_explosion_obj, 0, -1);
-				enemies[i][j].visible = 0;
-			}
-        }
-    }
-
-}
-
-int player_death()
-{
-    for(int i=0; i<ENEMIES_LIN; i++)
-    {
-        for(int j=0; j<ENEMIES_COL; j++)
-        {
-            if(
-               earthprotector_obj.posx <= enemies_proj[i][j].posx && 
-               earthprotector_obj.posx+10 >= enemies_proj[i][j].posx &&
-               earthprotector_obj.posy <= (enemies_proj[i][j].posy + 8) &&
-               earthprotector_obj.posy+7 >= (enemies_proj[i][j].posy + 8)
-            ) { return (--lives == 0) ? 2 : 1; }
-            if(
-               earthprotector_obj.posx <= enemies[i][j].posx &&
-               earthprotector_obj.posx+earthprotector_obj.spriteszx-1 >= enemies[i][j].posx &&
-               earthprotector_obj.posy <= (enemies[i][j].posy + enemies[i][j].spriteszy-1) &&
-               earthprotector_obj.posy+earthprotector_obj.spriteszy-1 >= (enemies[i][j].posy + enemies[i][j].spriteszy-1)
-            ) { return 2; } 
-        }
-    }
-
-    return 0;
-}
-
-void restart()
-{
-    delay_ms(1500);
-
-    destroy_proj(&player_proj);
-
-    draw_object(&earthprotector_obj, 0, BLACK);
-    earthprotector_obj.posx = player_xo;
-    earthprotector_obj.posy = player_yo;
-    move_object(&earthprotector_obj);
-
-    for(int i=0; i<ENEMIES_LIN; i++)
-    {
-        for(int j=0; j<ENEMIES_COL; j++)
-        {
-            destroy_proj(&enemies_proj[i][j]);
-        }
-    }
-
-    enemy_shots = 0;
-}
-
-void finish() {
-        display_print("GAME OVER",  WIDTH*0.35,  HEIGHT/2, 1, RED);
-}
-
 void enemies_init()
 {
     int i=0;
@@ -476,6 +379,137 @@ void enemies_init()
             );
     } i++; 
 }
+void enemy_fire(const int i, const int j)
+{
+    const int r = random();
+    
+    if(enemies_proj[i][j].visible) {
+        if(check_screen_limits(&enemies_proj[i][j])) {
+            move_object(&enemies_proj[i][j]);
+        }
+        else {
+            destroy_proj(&enemies_proj[i][j]);
+            enemy_shots--;
+        }
+    }
+    else {
+        if(r % 333 == 0 && enemy_shots < max_enemy_shots) {
+            enemy_shots++;
+            create_proj(&enemies_proj[i][j], enemies[i][j].posx + 5, 
+                        enemies[i][j].posy + 10, 5);
+            //create_proj(&enemies_proj[i][j], enemies[i][j].posx + 6, 
+            //            enemies[i][j].posy + 10, 5);
+        }
+    }
+}
+
+void draw_enemies(){
+    const int out = check_x(&enemies[0][0]) || check_x(&enemies[0][ENEMIES_COL-1]);
+
+    draw_object(&enemy_explosion_obj, 1, 0);
+	enemy_explosion_obj.posx = 0;
+	enemy_explosion_obj.posy = 0;
+
+	for(int i=0; i<ENEMIES_LIN; i++) {
+        for(int j=0; j<ENEMIES_COL; j++){
+			if(enemies[i][j].alive) {
+                enemies[i][j].dy = out * 13;  
+                enemies[i][j].dx *= (1 - (out << 1)); 
+                enemies[i][j].speedycnt = (out) ? 1 : 5;
+				move_object(&enemies[i][j]);
+
+                enemy_fire(i, j);
+			}
+            else if(enemies[i][j].visible) {
+                // enemy death animation 
+				draw_object(&enemies[i][j], 2, 0);
+				enemy_explosion_obj.posx = enemies[i][j].posx;
+				enemy_explosion_obj.posy = enemies[i][j].posy;
+				draw_object(&enemies[i][j], 2, 0);
+				draw_object(&enemy_explosion_obj, 0, -1);
+				enemies[i][j].visible = 0;
+			}
+        }
+    }
+
+}
+
+int player_death()
+{
+    for(int i=0; i<ENEMIES_LIN; i++)
+    {
+        for(int j=0; j<ENEMIES_COL; j++)
+        {
+            if(
+               earthprotector_obj.posx <= enemies_proj[i][j].posx && 
+               earthprotector_obj.posx+10 >= enemies_proj[i][j].posx &&
+               earthprotector_obj.posy <= (enemies_proj[i][j].posy + 8) &&
+               earthprotector_obj.posy+7 >= (enemies_proj[i][j].posy + 8)
+            ) { return (--lives == 0) ? 2 : 1; }
+            if(
+               earthprotector_obj.posx <= enemies[i][j].posx &&
+               earthprotector_obj.posx+earthprotector_obj.spriteszx-1 >= enemies[i][j].posx &&
+               earthprotector_obj.posy <= (enemies[i][j].posy + enemies[i][j].spriteszy-1) &&
+               earthprotector_obj.posy+earthprotector_obj.spriteszy-1 >= (enemies[i][j].posy + enemies[i][j].spriteszy-1)
+            ) { return 2; } 
+        }
+    }
+
+    return 0;
+}
+
+void restart()
+{
+    //delay_ms(1500);
+
+    player_death_obj.posx = earthprotector_obj.posx;
+    player_death_obj.posy = earthprotector_obj.posy;
+
+    destroy_proj(&player_proj);
+    draw_object(&earthprotector_obj, 0, BLACK);
+
+    for(int i=0; i<100; i++)
+    {
+        //draw_object(&player_death_obj, 0, -1);
+        move_object(&player_death_obj);
+        delay_ms(40);
+    }
+
+  //  draw_object(&player_death_obj, 0, -1);
+    earthprotector_obj.posx = player_xo;
+    earthprotector_obj.posy = player_yo;
+    draw_object(&player_death_obj, 0, BLACK);
+    move_object(&earthprotector_obj);
+
+    for(int i=0; i<ENEMIES_LIN; i++)
+    {
+        for(int j=0; j<ENEMIES_COL; j++)
+        {
+            destroy_proj(&enemies_proj[i][j]);
+        }
+    }
+
+    enemy_shots = 0;
+}
+
+void finish() {
+        display_print("GAME OVER",  WIDTH*0.35,  HEIGHT/2, 1, RED);
+}
+
+//-----------------------------------------------------------------------------
+//                          "BARRIER" LOGIC
+//-----------------------------------------------------------------------------
+void draw_barrier(const barrier_t* b, const int color) {
+    display_frectangle(b->xo, b->yo, b->w, b->h, color);
+}
+
+void check_barrier_hit(const object_s* proj, barrier_t* barr) {
+    if  (
+        (proj->posy + proj->spriteszy == barr->yo) &&
+        (proj->posx >= barr->xo) &&
+        (proj->posx <= barr->xo + barr->w)
+    ) { barr->hp--; }
+}
 
 int main()
 {
@@ -526,6 +560,20 @@ int main()
             0, 0
     );
 
+    // player death animation
+	init_object(
+            &player_death_obj, 
+            player_death1[0], 
+            player_death2[0], 
+            0, 
+            11, 8, 
+            0, 
+            0, 
+            0, 0, 
+            5, 5, 
+            0, 0
+    );
+
     for(int i=0; i<3; i++) {
         init_object(
                 &hearts[i], 
@@ -554,6 +602,37 @@ int main()
             finish();
             break;
         }
+
+        for(int i=0; i<ENEMIES_LIN; i++) {
+            for(int j=0; j<ENEMIES_COL; j++) {
+               check_barrier_hit(&enemies_proj[i][j], &b1);
+               check_barrier_hit(&enemies_proj[i][j], &b2);
+               check_barrier_hit(&enemies_proj[i][j], &b3);
+            }
+        }
+
+        if(b1.hp > 0) {
+            draw_barrier(&b1, GREEN);
+        } else {
+            draw_barrier(&b1, BLACK);
+        }
+
+        if(b2.hp > 0) {
+            draw_barrier(&b2, GREEN);
+        } else {
+            draw_barrier(&b2, BLACK);
+        }
+
+        if(b3.hp > 0) {
+            draw_barrier(&b3, GREEN);
+        } else {
+            draw_barrier(&b3, BLACK);
+        }
+
+    //    move_object(&barrier1_l1);
+    //    move_object(&barrier1_r1);
+    //    move_object(&barrier1_l2);
+    //    move_object(&barrier1_r2);
 
         const int input = get_input();
         player_controls(input);
